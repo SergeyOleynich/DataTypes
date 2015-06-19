@@ -16,8 +16,118 @@
 
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-    // Override point for customization after application launch.
+    
+    int xRows = 10;
+    int yColumns = 10;
+    
+    NSArray *field = [self createPlayFieldXrows:xRows yColumn:yColumns];
+    [self printFieldArray:field];
+    
+    int originX = arc4random() % xRows + 1;
+    int originY = arc4random() % yColumns + 1;
+    int width = originX == xRows ? 1 : (arc4random() % (xRows - originX) + 1);
+    int height = originY == yColumns ? 1 : (arc4random() % (yColumns - originY) + 1);
+    
+    field = [self createHitFieldFromRect:CGRectMake(originX, originY, width, height) forMainField:field];
+    [self printFieldArray:field];
+    
+    NSLog(@"%@", [self hitPoint:CGPointMake(arc4random()%10 + 1, arc4random()%10 + 1) inArray:field]);
+    
     return YES;
+}
+
+- (void)printFieldArray:(NSArray *)field {
+    NSString *final = @"\n";
+    for (int i = 0; i < [field count]; i++) {
+        NSArray *temp = [field objectAtIndex:i];
+        if (i >= 9) {
+            final = [final stringByAppendingString:[NSString stringWithFormat:@"%i ", i+1]];
+        } else {
+            final = [final stringByAppendingString:[NSString stringWithFormat:@"%i  ", i+1]];
+        }
+        for (int j = 0; j < [temp count]; j++) {
+            NSValue *value = [temp objectAtIndex:j];
+            if (i >= 9) {
+                final = [final stringByAppendingString:[NSString stringWithFormat:@"%@ ", NSStringFromCGPoint([value CGPointValue])]];
+            } else {
+                final = [final stringByAppendingString:[NSString stringWithFormat:@" %@ ", NSStringFromCGPoint([value CGPointValue])]];
+            }
+        }
+        final = [final stringByAppendingString:@"\n"];
+    }
+    
+    NSString *xAxis = @"\n";
+    
+    for (int i = 0; i < [field count]; i++) {
+        int temp = i;
+        if (i == 0) {
+            xAxis = [xAxis stringByAppendingString:[NSString stringWithFormat:@"       %i", ++temp]];
+        } else {
+            xAxis = [xAxis stringByAppendingString:[NSString stringWithFormat:@"       %i", ++temp]];
+        }
+    }
+    
+    xAxis = [xAxis stringByAppendingString:final];
+    
+    NSLog(@"%@", xAxis);
+}
+
+- (NSString *)hitPoint:(CGPoint)point inArray:(NSArray *)array {
+    if (array == nil) {
+        return @"Failed. No Field was created";
+    }
+    if (point.x <= 0 || point.y <= 0) {
+        return @"Failed. Point can't be negative";
+    }
+    NSArray *temp = [array objectAtIndex:point.x - 1];
+    NSValue *value = [temp objectAtIndex:point.y - 1];
+    if ([value isEqualToValue:[NSValue valueWithCGPoint:CGPointMake(-1, -1)]]) {
+        return [NSString stringWithFormat:@"Success! Hit point = %@", NSStringFromCGPoint(point)];
+    }
+    return [NSString stringWithFormat:@"Failed! Miss point = %@", NSStringFromCGPoint(point)];
+}
+
+- (NSArray *)createPlayFieldXrows:(int)x yColumn:(int)y {
+    if (x <= 0 || y <= 0) {
+        NSLog(@"Can't be 0");
+        return nil;
+    }
+    NSMutableArray *field = [[NSMutableArray alloc] init];
+    for (int i = 1; i <= x; i++) {
+        NSMutableArray *temp = [[NSMutableArray alloc] init];
+        for (int j = 1; j <= y; j++) {
+            NSValue *value = [NSValue valueWithCGPoint:CGPointMake(i, j)];
+            [temp addObject:value];
+        }
+        [field addObject:temp];
+    }
+    return (NSArray *)field;
+}
+
+- (NSArray *)createHitFieldFromRect:(CGRect)rect forMainField:(NSArray *)array {
+    NSLog(@"Field for hit: %@", NSStringFromCGRect(rect));
+    if (rect.origin.x <= 0 || rect.origin.y <= 0) {
+        NSLog(@"Can't be 0");
+        return nil;
+    }
+    if (rect.origin.x + rect.size.width > [array count]+1 || rect.origin.y + rect.size.height > [array [0] count]+1) {
+        NSLog(@"Width %f or height %f from point x %f or point y %f bigger than length of array %li", rect.size.width, rect.size.height, rect.origin.x, rect.origin.y, [array count]);
+        return  nil;
+    }
+    if (rect.size.width == 0 || rect.size.height == 0) {
+        NSLog(@"Rect width or height can't be %f", MIN(rect.size.width, rect.size.height));
+        return nil;
+    }
+    NSMutableArray *field = [[NSMutableArray alloc] initWithArray:array];
+    for (int i = rect.origin.y-1; i < rect.origin.y + rect.size.height-1; i++) {
+        NSMutableArray *temp = [field objectAtIndex:i];
+        for (int j = rect.origin.x-1; j < rect.origin.x + rect.size.width-1; j++) {
+            NSValue *value = [NSValue valueWithCGPoint:CGPointMake(-1, -1)];
+            [temp replaceObjectAtIndex:j withObject:value];
+        }
+        [field replaceObjectAtIndex:i withObject:temp];
+    }
+    return (NSArray *)field;
 }
 
 - (void)applicationWillResignActive:(UIApplication *)application {
